@@ -58,9 +58,21 @@ export const useLandscapeStore = defineStore('landscape', () => {
       return { success: false, message: '出现黄化或霉斑时必须填写处理说明' }
     }
 
+    let finalStatus = data.status
+    let finalIsSold = data.isSold
+
+    if (data.status === 'sold') {
+      finalIsSold = true
+    }
+    if (data.isSold) {
+      finalStatus = 'sold'
+    }
+
     const now = new Date().toISOString()
     const landscape: MicroLandscape = {
       ...data,
+      status: finalStatus,
+      isSold: finalIsSold,
       id: generateId(),
       createdAt: now,
       updatedAt: now
@@ -103,9 +115,33 @@ export const useLandscapeStore = defineStore('landscape', () => {
       return { success: false, message: '出现黄化或霉斑时必须填写处理说明' }
     }
 
+    let finalStatus = newStatus
+    let finalIsSold = data.isSold ?? current.isSold
+
+    const hasStatusChange = data.status !== undefined
+    const hasIsSoldChange = data.isSold !== undefined
+
+    if (hasStatusChange) {
+      if (data.status === 'sold') {
+        finalIsSold = true
+      } else {
+        finalIsSold = false
+      }
+    }
+
+    if (hasIsSoldChange) {
+      if (data.isSold === true) {
+        finalStatus = 'sold'
+      } else if (finalStatus === 'sold') {
+        finalStatus = 'healthy'
+      }
+    }
+
     const updated: MicroLandscape = {
       ...current,
       ...data,
+      status: finalStatus,
+      isSold: finalIsSold,
       updatedAt: new Date().toISOString()
     }
     landscapes.value[index] = updated
@@ -150,10 +186,17 @@ export const useLandscapeStore = defineStore('landscape', () => {
     careRecords.value.push(record)
     saveCareRecords(careRecords.value)
 
-    updateLandscape(landscapeId, {
-      status: data.statusAfter,
-      lastCareDate: data.careDate
-    })
+    const newCareDate = new Date(data.careDate).getTime()
+    const currentLastCareDate = landscape.lastCareDate
+      ? new Date(landscape.lastCareDate).getTime()
+      : 0
+
+    if (newCareDate >= currentLastCareDate) {
+      updateLandscape(landscapeId, {
+        status: data.statusAfter,
+        lastCareDate: data.careDate
+      })
+    }
 
     return { success: true, record }
   }
