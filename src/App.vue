@@ -8,14 +8,27 @@ import {
   NMenu,
   NIcon,
   NMessageProvider,
-  NDialogProvider
+  NDialogProvider,
+  NDivider
 } from 'naive-ui'
-import { Leaf, Calendar, BarChart3 } from 'lucide-vue-next'
+import {
+  LayoutDashboard,
+  Leaf,
+  Calendar,
+  BarChart3,
+  Archive,
+  ScrollText
+} from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 
 const menuOptions = [
+  {
+    label: '养护看板',
+    key: 'dashboard',
+    icon: () => h(NIcon, null, { default: () => h(LayoutDashboard) })
+  },
   {
     label: '微景观列表',
     key: 'landscapes',
@@ -30,19 +43,37 @@ const menuOptions = [
     label: '数据分析',
     key: 'analytics',
     icon: () => h(NIcon, null, { default: () => h(BarChart3) })
+  },
+  {
+    type: 'divider',
+    key: 'divider1'
+  },
+  {
+    label: '已售出归档',
+    key: 'sold-archive',
+    icon: () => h(NIcon, null, { default: () => h(Archive) })
+  },
+  {
+    label: '操作日志',
+    key: 'operation-logs',
+    icon: () => h(NIcon, null, { default: () => h(ScrollText) })
   }
 ]
 
 const activeKey = computed(() => {
   const path = route.path
+  if (path === '/' || path === '/dashboard') return 'dashboard'
   if (path.startsWith('/landscapes/')) return 'landscapes'
+  if (path === '/landscapes') return 'landscapes'
   if (path === '/calendar') return 'calendar'
   if (path === '/analytics') return 'analytics'
-  return 'landscapes'
+  if (path === '/sold-archive') return 'sold-archive'
+  if (path === '/operation-logs') return 'operation-logs'
+  return 'dashboard'
 })
 
 function handleMenuSelect(key: string) {
-  if (key === 'landscapes') {
+  if (key === 'dashboard') {
     router.push('/')
   } else {
     router.push(`/${key}`)

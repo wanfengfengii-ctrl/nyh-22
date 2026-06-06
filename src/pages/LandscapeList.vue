@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NDataTable,
@@ -10,29 +10,55 @@ import {
   NCard,
   NTag,
   NPopconfirm,
-  NIcon
+  NIcon,
+  NUpload,
+  NDialog,
+  NDropdown,
+  useDialog,
+  useMessage
 } from 'naive-ui'
-import { Plus, Search, Eye, Edit2, Trash2 } from 'lucide-vue-next'
+import {
+  Plus,
+  Search,
+  Eye,
+  Edit2,
+  Trash2,
+  Upload,
+  Download,
+  CheckSquare,
+  Square,
+  Settings
+} from 'lucide-vue-next'
 import { useLandscapeStore } from '@/stores/landscape'
 import StatusTag from '@/components/StatusTag.vue'
 import LandscapeForm from '@/components/LandscapeForm.vue'
-import { landscapeStatusOptions, mossSpeciesOptions } from '@/types'
-import type { MicroLandscape } from '@/types'
-import { message } from '@/utils/discrete'
+import BatchOperationDialog from '@/components/BatchOperationDialog.vue'
+import { landscapeStatusOptions, mossSpeciesOptions, containerTypeOptions } from '@/types'
+import type { MicroLandscape, BatchImportItem } from '@/types'
+import { message as discreteMessage } from '@/utils/discrete'
+import { parseCSV } from '@/utils/storage'
 
 const router = useRouter()
 const store = useLandscapeStore()
+const dialog = useDialog()
+const message = useMessage()
 
 const searchKeyword = ref('')
 const filterSpecies = ref<string | null>(null)
+const filterContainer = ref<string | null>(null)
 const filterStatus = ref<string | null>(null)
 const showForm = ref(false)
 const editingLandscape = ref<MicroLandscape | null>(null)
+const selectedRowKeys = ref<string[]>([])
+
+const showBatchDialog = ref(false)
+const batchOperationType = ref<'status_update' | 'care_record' | 'sold' | 'delete'>('status_update')
 
 onMounted(() => {
   if (store.landscapes.length === 0) {
     initMockData()
   }
+  store.initDefaultCareRules()
 })
 
 function initMockData() {
@@ -153,6 +179,10 @@ const filteredLandscapes = computed(() => {
     result = result.filter(l => l.mossSpecies === filterSpecies.value)
   }
 
+  if (filterContainer.value) {
+    result = result.filter(l => l.containerType === filterContainer.value)
+  }
+
   if (filterStatus.value) {
     result = result.filter(l => l.status === filterStatus.value)
   }
@@ -160,7 +190,13 @@ const filteredLandscapes = computed(() => {
   return result
 })
 
+const selectedCount = computed(() => selectedRowKeys.value.length)
+
 const columns = [
+  {
+    type: 'selection' as const,
+    width: 50
+  },
   {
     title: '作品编号',
     key: 'code',
@@ -231,6 +267,7 @@ const columns = [
             {
               size: 'small',
               circle: true,
+              disabled: row.isSold,
               onClick: () => handleEdit(row)
             },
             {
@@ -240,13 +277,14 @@ const columns = [
           h(
             NPopconfirm,
             {
+              disabled: row.isSold,
               onPositiveClick: () => handleDelete(row.id)
             },
             {
-              default: () => '确定要删除这个作品吗？',
+              default: () => row.isSold ? '已售出作品不可删除' : '确定要删除这个作品吗？',
               trigger: () => h(
                 NButton,
-                { size: 'small', type: 'error', circle: true },
+                { size: 'small', type: 'error', circle: true, disabled: row.isSold },
                 {
                   default: () => h(NIcon, { size: 16 }, { default: () => h(Trash2) })
                 }
@@ -271,18 +309,119 @@ function handleEdit(landscape: MicroLandscape) {
 
 function handleDelete(id: string) {
   store.deleteLandscape(id)
-  message.success('删除成功')
+  discreteMessage.success('删除成功')
 }
 
 function handleReset() {
   if (confirm('确定要重置所有数据吗？此操作不可恢复。')) {
     store.resetAllData()
     initMockData()
-    message.success('数据已重置')
+    discreteMessage.success('数据已重置')
   }
 }
 
-import { h } from 'vue'
+function handleBatchOperation(type: 'status_update' | 'care_record' | 'sold' | 'delete') {
+  if (selectedRowKeys.value.length === 0) {
+    discreteMessage.warning('请先选择作品')
+    return
+  }
+  batchOperationType.value = type
+  showBatchDialog.value = true
+}
+
+function handleBatchSuccess() {
+  selectedRowKeys.value = []
+}
+
+function handleExportAll() {
+  store.batchExport()
+  discreteMessage.success('导出成功')
+}
+
+function handleExportSelected() {
+  if (selectedRowKeys.value.length === 0) {
+    discreteMessage.warning('请先选择作品')
+    return
+  }
+  store.batchExport(selectedRowKeys.value)
+  discreteMessage.success('导出成功')
+}
+
+function handleImportFile(options: { file: File; fileList: any[] }) {
+  const file = options.file
+  const reader = new FileReader()
+  
+  reader.onload = (e) => {
+    try {
+      const content = e.target?.result as string
+      
+      if (file.name.endsWith('.json')) {
+        const data = JSON.parse(content)
+        const items = Array.isArray(data) ? data : [data]
+        const importItems = items.map((item: any) => ({
+          code: item.code,
+          containerType: item.containerType,
+          mossSpecies: item.mossSpecies,
+          creationDate: item.creationDate,
+          lightCondition: item.lightCondition,
+          humidityMin: item.humidityMin,
+          humidityMax: item.humidityMax,
+          status: item.status || 'healthy',
+          notes: item.notes || '',
+          lastCareDate: item.lastCareDate
+        }))
+        
+        const result = store.batchImport(importItems)
+        if (result.success) {
+          discreteMessage.success(`导入成功 ${result.count} 个作品`)
+        }
+        if (result.errors.length > 0) {
+          discreteMessage.error(`导入失败 ${result.errors.length} 条，详情请查看`)
+          console.error('导入错误:', result.errors)
+        }
+      } else if (file.name.endsWith('.csv')) {
+        const rows = parseCSV(content)
+        const headers = rows[0]
+        const items: BatchImportItem[] = []
+        
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i]
+          const item: any = {}
+          headers.forEach((header, index) => {
+            item[header.trim()] = row[index] || ''
+          })
+          items.push({
+            code: item.code,
+            containerType: item.containerType,
+            mossSpecies: item.mossSpecies,
+            creationDate: item.creationDate,
+            lightCondition: item.lightCondition,
+            humidityMin: Number(item.humidityMin),
+            humidityMax: Number(item.humidityMax),
+            status: item.status as any || 'healthy',
+            notes: item.notes,
+            lastCareDate: item.lastCareDate
+          })
+        }
+        
+        const result = store.batchImport(items)
+        if (result.success) {
+          discreteMessage.success(`导入成功 ${result.count} 个作品`)
+        }
+        if (result.errors.length > 0) {
+          discreteMessage.error(`导入失败 ${result.errors.length} 条`)
+        }
+      } else {
+        discreteMessage.error('不支持的文件格式，请上传 JSON 或 CSV 文件')
+      }
+    } catch (err) {
+      discreteMessage.error('文件解析失败，请检查文件格式')
+      console.error(err)
+    }
+  }
+  
+  reader.readAsText(file)
+}
 </script>
 
 <template>
@@ -294,6 +433,20 @@ import { h } from 'vue'
       </div>
       <div class="flex items-center gap-2">
         <n-button @click="handleReset">重置数据</n-button>
+        <n-dropdown @select="handleBatchOperation">
+          <n-button type="default" :disabled="selectedCount === 0">
+            <template #icon>
+              <n-icon><CheckSquare /></n-icon>
+            </template>
+            批量操作 ({{ selectedCount }})
+          </n-button>
+          <template #dropdown>
+            <n-dropdown-option value="status_update">更新状态</n-dropdown-option>
+            <n-dropdown-option value="care_record">批量养护</n-dropdown-option>
+            <n-dropdown-option value="sold">标记售出</n-dropdown-option>
+            <n-dropdown-option value="delete">批量删除</n-dropdown-option>
+          </template>
+        </n-dropdown>
         <n-button type="primary" @click="handleAdd">
           <template #icon>
             <n-icon><Plus /></n-icon>
@@ -325,17 +478,60 @@ import { h } from 'vue'
         />
 
         <n-select
+          v-model:value="filterContainer"
+          placeholder="筛选容器"
+          :options="containerTypeOptions.map(o => ({ label: o, value: o }))"
+          style="width: 160px"
+          clearable
+        />
+
+        <n-select
           v-model:value="filterStatus"
           placeholder="筛选状态"
           :options="landscapeStatusOptions"
           style="width: 160px"
           clearable
         />
+
+        <div class="flex-1"></div>
+
+        <n-upload
+          :show-file-list="false"
+          accept=".json,.csv"
+          :custom-request="handleImportFile as any"
+        >
+          <n-button>
+            <template #icon>
+              <n-icon><Upload /></n-icon>
+            </template>
+            导入
+          </n-button>
+        </n-upload>
+
+        <n-dropdown>
+          <n-button>
+            <template #icon>
+              <n-icon><Download /></n-icon>
+            </template>
+            导出
+          </n-button>
+          <template #dropdown>
+            <n-dropdown-option value="all" @click="handleExportAll">导出全部</n-dropdown-option>
+            <n-dropdown-option
+              value="selected"
+              :disabled="selectedCount === 0"
+              @click="handleExportSelected"
+            >
+              导出选中 ({{ selectedCount }})
+            </n-dropdown-option>
+          </template>
+        </n-dropdown>
       </div>
 
       <div class="overflow-x-auto">
         <n-data-table
-          :columns="columns"
+          v-model:checked-row-keys="selectedRowKeys"
+          :columns="columns as any"
           :data="filteredLandscapes"
           :bordered="false"
           :single-line="false"
@@ -349,6 +545,13 @@ import { h } from 'vue'
       v-model:visible="showForm"
       :landscape="editingLandscape"
       @success="showForm = false"
+    />
+
+    <BatchOperationDialog
+      v-model:visible="showBatchDialog"
+      :selected-ids="selectedRowKeys"
+      :operation-type="batchOperationType"
+      @success="handleBatchSuccess"
     />
   </div>
 </template>

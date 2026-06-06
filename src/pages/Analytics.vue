@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { NCard, NSelect, NGrid, NGridItem, NSpace, NStatistic } from 'naive-ui'
+import { ref, computed } from 'vue'
+import { NCard, NSelect, NGrid, NGridItem, NSpace, NStatistic, NTab, NTabs, NRadioGroup, NRadio } from 'naive-ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import {
@@ -32,6 +32,7 @@ use([
 const store = useLandscapeStore()
 
 const selectedLandscape = ref<string | null>(null)
+const trendDays = ref<7 | 30>(7)
 
 const landscapeOptions = computed(() => {
   return store.landscapes.map(l => ({
@@ -46,6 +47,12 @@ const yellowingCount = computed(() => store.getStatusCount('yellowing'))
 const moldCount = computed(() => store.getStatusCount('mold'))
 const soldCount = computed(() => store.getStatusCount('sold'))
 const totalRecords = computed(() => store.careRecords.length)
+const abnormalRate = computed(() => {
+  const abnormal = yellowingCount.value + moldCount.value
+  const active = totalCount.value - soldCount.value
+  if (active === 0) return 0
+  return Math.round((abnormal / active) * 100)
+})
 
 const statusPieOption = computed(() => ({
   tooltip: {
@@ -293,6 +300,153 @@ const careTypePieOption = computed(() => {
     ]
   }
 })
+
+const careTrendOption = computed(() => {
+  const data = store.getCareTrendData(trendDays.value)
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['养护次数', '异常次数'],
+      top: 0
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '12%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.date.slice(5))
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1
+    },
+    series: [
+      {
+        name: '养护次数',
+        type: 'bar',
+        data: data.map(d => d.careCount),
+        itemStyle: { color: '#2080f0' }
+      },
+      {
+        name: '异常次数',
+        type: 'bar',
+        data: data.map(d => d.abnormalCount),
+        itemStyle: { color: '#f0a020' }
+      }
+    ]
+  }
+})
+
+const abnormalRateTrendOption = computed(() => {
+  const data = store.getCareTrendData(trendDays.value)
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const item = params[0]
+        return `${item.name}<br/>异常率: ${item.value}%`
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.date.slice(5)),
+      boundaryGap: false
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: '{value}%' },
+      max: 100
+    },
+    series: [
+      {
+        name: '异常率',
+        type: 'line',
+        smooth: true,
+        data: data.map(d => d.abnormalRate),
+        itemStyle: { color: '#d03050' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(208, 48, 80, 0.3)' },
+              { offset: 1, color: 'rgba(208, 48, 80, 0.05)' }
+            ]
+          }
+        }
+      }
+    ]
+  }
+})
+
+const totalCareTrendOption = computed(() => {
+  const data = store.getCareTrendData(trendDays.value)
+  const cumulative: number[] = []
+  let sum = 0
+  data.forEach(d => {
+    sum += d.careCount
+    cumulative.push(sum)
+  })
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const item = params[0]
+        return `${item.name}<br/>累计养护: ${item.value}次`
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.date.slice(5)),
+      boundaryGap: false
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1
+    },
+    series: [
+      {
+        name: '累计养护',
+        type: 'line',
+        smooth: true,
+        data: cumulative,
+        itemStyle: { color: '#18a058' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(24, 160, 88, 0.3)' },
+              { offset: 1, color: 'rgba(24, 160, 88, 0.05)' }
+            ]
+          }
+        }
+      }
+    ]
+  }
+})
 </script>
 
 <template>
@@ -315,7 +469,7 @@ const careTypePieOption = computed(() => {
       </n-grid-item>
       <n-grid-item>
         <n-card>
-          <n-statistic label="异常状态" :value="yellowingCount + moldCount" value-style="color: #f0a020" />
+          <n-statistic label="异常率(在养)" :value="abnormalRate" value-style="color: #f0a020" suffix="%" />
         </n-card>
       </n-grid-item>
       <n-grid-item>
@@ -325,34 +479,67 @@ const careTypePieOption = computed(() => {
       </n-grid-item>
     </n-grid>
 
-    <n-grid :cols="2" :x-gap="16" :y-gap="16">
-      <n-grid-item>
-        <n-card title="状态分布">
-          <v-chart :option="statusPieOption" style="height: 320px" autoresize />
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card title="养护类型统计">
-          <v-chart :option="careTypePieOption" style="height: 320px" autoresize />
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+    <n-tabs type="line">
+      <n-tab name="overview" tab="概览">
+        <n-grid :cols="2" :x-gap="16" :y-gap="16">
+          <n-grid-item>
+            <n-card title="状态分布">
+              <v-chart :option="statusPieOption" style="height: 320px" autoresize />
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card title="养护类型统计">
+              <v-chart :option="careTypePieOption" style="height: 320px" autoresize />
+            </n-card>
+          </n-grid-item>
+        </n-grid>
 
-    <n-card title="各品种状态分布">
-      <v-chart :option="speciesBarOption" style="height: 360px" autoresize />
-    </n-card>
+        <n-card title="各品种状态分布" class="mt-4">
+          <v-chart :option="speciesBarOption" style="height: 360px" autoresize />
+        </n-card>
+      </n-tab>
 
-    <n-card title="湿度变化趋势">
-      <div class="mb-4">
-        <n-select
-          v-model:value="selectedLandscape"
-          placeholder="选择作品查看湿度趋势"
-          :options="landscapeOptions"
-          style="width: 320px"
-          clearable
-        />
-      </div>
-      <v-chart :option="humidityTrendOption" style="height: 360px" autoresize />
-    </n-card>
+      <n-tab name="trend" tab="养护趋势">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="text-sm text-gray-600">统计周期：</span>
+          <n-radio-group v-model:value="trendDays">
+            <n-radio :value="7">近7天</n-radio>
+            <n-radio :value="30">近30天</n-radio>
+          </n-radio-group>
+        </div>
+
+        <n-grid :cols="2" :x-gap="16" :y-gap="16">
+          <n-grid-item>
+            <n-card title="养护次数趋势">
+              <v-chart :option="careTrendOption" style="height: 300px" autoresize />
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card title="异常率趋势">
+              <v-chart :option="abnormalRateTrendOption" style="height: 300px" autoresize />
+            </n-card>
+          </n-grid-item>
+        </n-grid>
+
+        <n-card title="累计养护次数" class="mt-4">
+          <v-chart :option="totalCareTrendOption" style="height: 300px" autoresize />
+        </n-card>
+      </n-tab>
+
+      <n-tab name="detail" tab="单品分析">
+        <n-card title="湿度变化趋势">
+          <div class="mb-4">
+            <n-select
+              v-model:value="selectedLandscape"
+              placeholder="选择作品查看湿度趋势"
+              :options="landscapeOptions"
+              style="width: 320px"
+              clearable
+            />
+          </div>
+          <v-chart :option="humidityTrendOption" style="height: 360px" autoresize />
+        </n-card>
+      </n-tab>
+    </n-tabs>
   </div>
 </template>
