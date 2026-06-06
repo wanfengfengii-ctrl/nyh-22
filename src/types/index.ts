@@ -36,6 +36,7 @@ export interface MicroLandscape {
   status: LandscapeStatus
   lastCareDate: string
   isSold: boolean
+  statusBeforeSold?: LandscapeStatus
   notes: string
   createdAt: string
   updatedAt: string

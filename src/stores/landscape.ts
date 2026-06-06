@@ -218,6 +218,7 @@ export const useLandscapeStore = defineStore('landscape', () => {
 
     let finalStatus = newStatus
     let finalIsSold = data.isSold ?? current.isSold
+    let finalStatusBeforeSold = current.statusBeforeSold
 
     const hasStatusChange = data.status !== undefined
     const hasIsSoldChange = data.isSold !== undefined
@@ -232,9 +233,10 @@ export const useLandscapeStore = defineStore('landscape', () => {
 
     if (hasIsSoldChange) {
       if (data.isSold === true) {
+        finalStatusBeforeSold = current.status
         finalStatus = 'sold'
       } else if (finalStatus === 'sold') {
-        finalStatus = 'healthy'
+        finalStatus = current.statusBeforeSold || 'healthy'
       }
     }
 
@@ -244,6 +246,7 @@ export const useLandscapeStore = defineStore('landscape', () => {
       ...data,
       status: finalStatus,
       isSold: finalIsSold,
+      statusBeforeSold: finalStatusBeforeSold,
       updatedAt: new Date().toISOString()
     }
     landscapes.value[index] = updated
@@ -648,6 +651,22 @@ export const useLandscapeStore = defineStore('landscape', () => {
       `处理结果: ${closingResult}`)
 
     completeTasksByType(record.landscapeId, 'abnormal')
+
+    if (landscape && !landscape.isSold) {
+      const hasOpenAbnormal = abnormalRecords.value.some(
+        r => r.landscapeId === record.landscapeId && !r.isClosed
+      )
+      if (!hasOpenAbnormal && (landscape.status === 'yellowing' || landscape.status === 'mold')) {
+        const index = landscapes.value.findIndex(l => l.id === record.landscapeId)
+        if (index !== -1) {
+          landscapes.value[index] = {
+            ...landscapes.value[index],
+            status: 'healthy',
+            updatedAt: new Date().toISOString()
+          }
+        }
+      }
+    }
 
     return { success: true }
   }
