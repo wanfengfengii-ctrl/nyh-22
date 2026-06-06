@@ -11,7 +11,15 @@ import type {
   ProductionProgressRecord,
   DeliveryConfirm,
   AfterSaleVisit,
-  VisitTask
+  VisitTask,
+  PointRecord,
+  Coupon,
+  CouponRedemption,
+  MarketingCampaign,
+  CampaignRegistration,
+  MarketingReminder,
+  CustomerSegment,
+  CampaignVisitTrack
 } from '@/types'
 
 const LANDSCAPES_KEY = 'moss_landscapes'
@@ -26,6 +34,14 @@ const PRODUCTION_RECORDS_KEY = 'moss_production_records'
 const DELIVERY_CONFIRMS_KEY = 'moss_delivery_confirms'
 const AFTER_SALE_VISITS_KEY = 'moss_after_sale_visits'
 const VISIT_TASKS_KEY = 'moss_visit_tasks'
+const POINT_RECORDS_KEY = 'moss_point_records'
+const COUPONS_KEY = 'moss_coupons'
+const COUPON_REDEMPTIONS_KEY = 'moss_coupon_redemptions'
+const MARKETING_CAMPAIGNS_KEY = 'moss_marketing_campaigns'
+const CAMPAIGN_REGISTRATIONS_KEY = 'moss_campaign_registrations'
+const MARKETING_REMINDERS_KEY = 'moss_marketing_reminders'
+const CUSTOMER_SEGMENTS_KEY = 'moss_customer_segments'
+const CAMPAIGN_VISIT_TRACKS_KEY = 'moss_campaign_visit_tracks'
 
 function getData<T>(key: string): T[] {
   const data = localStorage.getItem(key)
@@ -148,6 +164,15 @@ export function getDateRange(days: number): string[] {
     result.push(formatDate(date))
   }
   return result
+}
+
+export function dateStrToTimestamp(dateStr: string): number {
+  return new Date(dateStr).getTime()
+}
+
+export function timestampToDateStr(timestamp: number | null): string {
+  if (!timestamp) return ''
+  return formatDate(new Date(timestamp))
 }
 
 export function downloadJSON(data: unknown, filename: string): void {
@@ -302,4 +327,86 @@ export function isDateNotPast(dateStr: string): boolean {
 
 export function isBudgetValid(min: number, max: number): boolean {
   return typeof min === 'number' && typeof max === 'number' && min >= 0 && max >= min
+}
+
+export function getPointRecords(): PointRecord[] {
+  return getData<PointRecord>(POINT_RECORDS_KEY)
+}
+
+export function savePointRecords(records: PointRecord[]): void {
+  saveData(POINT_RECORDS_KEY, records)
+}
+
+export function getCoupons(): Coupon[] {
+  return getData<Coupon>(COUPONS_KEY)
+}
+
+export function saveCoupons(coupons: Coupon[]): void {
+  saveData(COUPONS_KEY, coupons)
+}
+
+export function getCouponRedemptions(): CouponRedemption[] {
+  return getData<CouponRedemption>(COUPON_REDEMPTIONS_KEY)
+}
+
+export function saveCouponRedemptions(redemptions: CouponRedemption[]): void {
+  saveData(COUPON_REDEMPTIONS_KEY, redemptions)
+}
+
+export function getMarketingCampaigns(): MarketingCampaign[] {
+  return getData<MarketingCampaign>(MARKETING_CAMPAIGNS_KEY)
+}
+
+export function saveMarketingCampaigns(campaigns: MarketingCampaign[]): void {
+  saveData(MARKETING_CAMPAIGNS_KEY, campaigns)
+}
+
+export function getCampaignRegistrations(): CampaignRegistration[] {
+  return getData<CampaignRegistration>(CAMPAIGN_REGISTRATIONS_KEY)
+}
+
+export function saveCampaignRegistrations(registrations: CampaignRegistration[]): void {
+  saveData(CAMPAIGN_REGISTRATIONS_KEY, registrations)
+}
+
+export function getMarketingReminders(): MarketingReminder[] {
+  return getData<MarketingReminder>(MARKETING_REMINDERS_KEY)
+}
+
+export function saveMarketingReminders(reminders: MarketingReminder[]): void {
+  saveData(MARKETING_REMINDERS_KEY, reminders)
+}
+
+export function getCustomerSegments(): CustomerSegment[] {
+  return getData<CustomerSegment>(CUSTOMER_SEGMENTS_KEY)
+}
+
+export function saveCustomerSegments(segments: CustomerSegment[]): void {
+  saveData(CUSTOMER_SEGMENTS_KEY, segments)
+}
+
+export function getCampaignVisitTracks(): CampaignVisitTrack[] {
+  return getData<CampaignVisitTrack>(CAMPAIGN_VISIT_TRACKS_KEY)
+}
+
+export function saveCampaignVisitTracks(tracks: CampaignVisitTrack[]): void {
+  saveData(CAMPAIGN_VISIT_TRACKS_KEY, tracks)
+}
+
+export function generateCouponCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let code = ''
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+export function generateCampaignNo(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const random = Math.random().toString(36).substr(2, 6).toUpperCase()
+  return `ACT${year}${month}${day}${random}`
 }

@@ -139,7 +139,7 @@ export const useCustomerStore = defineStore('customer', () => {
     return deliveryConfirms.value.find(d => d.orderId === orderId)
   }
 
-  function addCustomer(data: Omit<Customer, 'id' | 'totalOrders' | 'totalAmount' | 'createdAt' | 'updatedAt'>): { success: boolean; message?: string; customer?: Customer } {
+  function addCustomer(data: Omit<Customer, 'id' | 'totalOrders' | 'totalAmount' | 'memberLevel' | 'points' | 'createdAt' | 'updatedAt'>): { success: boolean; message?: string; customer?: Customer } {
     if (!data.name.trim()) {
       return { success: false, message: '客户姓名不能为空' }
     }
@@ -160,6 +160,8 @@ export const useCustomerStore = defineStore('customer', () => {
     const customer: Customer = {
       ...data,
       id: generateId(),
+      memberLevel: 'bronze',
+      points: 100,
       totalOrders: 0,
       totalAmount: 0,
       createdAt: now,
@@ -619,20 +621,30 @@ export const useCustomerStore = defineStore('customer', () => {
   function initMockData(): void {
     if (customers.value.length > 0) return
 
-    const mockCustomers: Omit<Customer, 'id' | 'totalOrders' | 'totalAmount' | 'createdAt' | 'updatedAt'>[] = [
-      { name: '张小明', phone: '13800138001', wechatId: 'zhangxm_wx', email: 'zhangxm@example.com', address: '北京市朝阳区XX小区', source: 'recommendation', sourceDetail: '朋友李华推荐', tags: ['VIP', '高消费'], notes: '偏好日式禅意风格，对细节要求高' },
-      { name: '李小红', phone: '13900139002', wechatId: 'lixh_wx', email: 'lixh@example.com', address: '上海市浦东新区XX路', source: 'social_media', sourceDetail: '小红书种草', tags: ['新客户'], notes: '第一次购买，需要多介绍养护知识' },
-      { name: '王大伟', phone: '13700137003', wechatId: 'wangdw_wx', source: 'offline_store', tags: ['回头客'], notes: '喜欢简约现代风格' },
-      { name: '赵小芳', phone: '13600136004', wechatId: 'zhaoxf_wx', email: 'zhaoxf@example.com', source: 'online_platform', sourceDetail: '淘宝店铺', tags: ['批量采购'], notes: '公司采购，需要开发票' },
-      { name: '刘小军', phone: '13500135005', source: 'exhibition', sourceDetail: '2024上海文创展', tags: ['展会客户'], notes: '展会现场下单，有优惠' }
+    const today = getToday()
+    const mockCustomers: Omit<Customer, 'id' | 'totalOrders' | 'totalAmount' | 'memberLevel' | 'points' | 'createdAt' | 'updatedAt'>[] = [
+      { name: '张小明', phone: '13800138001', wechatId: 'zhangxm_wx', email: 'zhangxm@example.com', address: '北京市朝阳区XX小区', birthday: '1990-06-15', source: 'recommendation', sourceDetail: '朋友李华推荐', tags: ['VIP', '高消费'], repurchaseIntention: 'high', notes: '偏好日式禅意风格，对细节要求高' },
+      { name: '李小红', phone: '13900139002', wechatId: 'lixh_wx', email: 'lixh@example.com', address: '上海市浦东新区XX路', birthday: '1995-08-20', source: 'social_media', sourceDetail: '小红书种草', tags: ['新客户'], repurchaseIntention: 'medium', notes: '第一次购买，需要多介绍养护知识' },
+      { name: '王大伟', phone: '13700137003', wechatId: 'wangdw_wx', birthday: '1988-03-10', source: 'offline_store', tags: ['回头客'], repurchaseIntention: 'medium', notes: '喜欢简约现代风格' },
+      { name: '赵小芳', phone: '13600136004', wechatId: 'zhaoxf_wx', email: 'zhaoxf@example.com', birthday: '1992-12-05', source: 'online_platform', sourceDetail: '淘宝店铺', tags: ['批量采购'], repurchaseIntention: 'low', notes: '公司采购，需要开发票' },
+      { name: '刘小军', phone: '13500135005', birthday: '1985-11-28', source: 'exhibition', sourceDetail: '2024上海文创展', tags: ['展会客户'], repurchaseIntention: 'low', notes: '展会现场下单，有优惠' }
     ]
 
     mockCustomers.forEach(c => addCustomer(c))
 
+    const levelPoints = [8000, 500, 1200, 30000, 2500]
+    customers.value.forEach((customer, index) => {
+      customer.points = levelPoints[index]
+      if (levelPoints[index] >= 50000) customer.memberLevel = 'diamond'
+      else if (levelPoints[index] >= 20000) customer.memberLevel = 'platinum'
+      else if (levelPoints[index] >= 5000) customer.memberLevel = 'gold'
+      else if (levelPoints[index] >= 1000) customer.memberLevel = 'silver'
+      else customer.memberLevel = 'bronze'
+    })
+
     if (customOrders.value.length > 0) return
 
     const customerIds = customers.value.map(c => c.id)
-    const today = getToday()
 
     const mockOrders: Omit<CustomOrder, 'id' | 'orderNo' | 'progressPercent' | 'isOverdue' | 'landscapeIds' | 'designFiles' | 'createdAt' | 'updatedAt'>[] = [
       { customerId: customerIds[0], customerName: '张小明', demandDescription: '日式禅意风格微景观，需要包含枯山水元素，尺寸约20cm直径', containerType: '陶瓷盆', mossSpecies: '白发藓', size: '20cm直径', style: '日式禅意', budgetMin: 800, budgetMax: 1200, finalPrice: 1080, appointmentDeliveryDate: addDays(today, 7), status: 'producing', currentStage: 'production', isUrgent: false, depositAmount: 500, balanceAmount: 580, paymentStatus: 'deposit_paid', productionNotes: '客户要求加入小石子装饰', deliveryMethod: 'express', trackingNumber: '' },

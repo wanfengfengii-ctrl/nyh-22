@@ -40,6 +40,11 @@ const routes = [
     path: '/customer-center',
     name: 'customer-center',
     component: () => import('@/pages/CustomerCenter.vue')
+  },
+  {
+    path: '/marketing-center',
+    name: 'marketing-center',
+    component: () => import('@/pages/MarketingCenter.vue')
   }
 ]
 

@@ -18,7 +18,8 @@ import {
   BarChart3,
   Archive,
   ScrollText,
-  Users
+  Users,
+  Megaphone
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -64,6 +65,11 @@ const menuOptions = [
     icon: () => h(NIcon, null, { default: () => h(Users) })
   },
   {
+    label: '营销运营中心',
+    key: 'marketing-center',
+    icon: () => h(NIcon, null, { default: () => h(Megaphone) })
+  },
+  {
     label: '操作日志',
     key: 'operation-logs',
     icon: () => h(NIcon, null, { default: () => h(ScrollText) })
@@ -79,6 +85,7 @@ const activeKey = computed(() => {
   if (path === '/analytics') return 'analytics'
   if (path === '/sold-archive') return 'sold-archive'
   if (path === '/customer-center') return 'customer-center'
+  if (path === '/marketing-center') return 'marketing-center'
   if (path === '/operation-logs') return 'operation-logs'
   return 'dashboard'
 })

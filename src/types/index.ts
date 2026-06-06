@@ -240,13 +240,17 @@ export interface Customer {
   wechatId?: string
   email?: string
   address?: string
+  birthday?: string
   source: CustomerSource
   sourceDetail?: string
   tags: string[]
+  memberLevel: MemberLevel
+  points: number
   totalOrders: number
   totalAmount: number
   firstOrderDate?: string
   lastOrderDate?: string
+  repurchaseIntention?: RepurchaseIntention
   notes: string
   createdAt: string
   updatedAt: string
@@ -456,4 +460,262 @@ export const styleOptions = [
   '极简主义',
   '复古怀旧',
   '其他'
+]
+
+export type MemberLevel = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+
+export interface MemberLevelConfig {
+  level: MemberLevel
+  name: string
+  minPoints: number
+  maxPoints: number
+  discount: number
+  color: string
+  benefits: string[]
+}
+
+export type PointChangeType = 'earn_order' | 'earn_signup' | 'earn_activity' | 'earn_birthday' | 'spend_coupon' | 'spend_product' | 'spend_activity' | 'adjust'
+
+export interface PointRecord {
+  id: string
+  customerId: string
+  customerName: string
+  type: PointChangeType
+  typeLabel: string
+  points: number
+  balanceAfter: number
+  description: string
+  relatedId?: string
+  createdAt: string
+}
+
+export type CouponType = 'discount' | 'fixed_amount' | 'free_shipping' | 'gift'
+
+export type CouponStatus = 'active' | 'inactive' | 'expired'
+
+export interface Coupon {
+  id: string
+  name: string
+  code: string
+  type: CouponType
+  typeLabel: string
+  value: number
+  minAmount?: number
+  totalQuantity: number
+  usedQuantity: number
+  startDate: string
+  endDate: string
+  applicableLevels: MemberLevel[]
+  description: string
+  status: CouponStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CouponRedemption {
+  id: string
+  couponId: string
+  couponName: string
+  customerId: string
+  customerName: string
+  orderId?: string
+  redeemDate: string
+  redeemMethod: 'online' | 'offline'
+  operator?: string
+  status: 'used' | 'cancelled'
+  createdAt: string
+}
+
+export type CampaignStatus = 'draft' | 'active' | 'ended' | 'cancelled'
+
+export type CampaignType = 'promotion' | 'membership_day' | 'festival' | 'new_product' | 'anniversary'
+
+export interface MarketingCampaign {
+  id: string
+  name: string
+  type: CampaignType
+  typeLabel: string
+  description: string
+  startDate: string
+  endDate: string
+  targetLevels: MemberLevel[]
+  targetTags: string[]
+  maxParticipants: number
+  participantCount: number
+  status: CampaignStatus
+  bannerUrl?: string
+  rules: string
+  rewards: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CampaignRegistration {
+  id: string
+  campaignId: string
+  campaignName: string
+  customerId: string
+  customerName: string
+  customerPhone: string
+  registerDate: string
+  status: 'registered' | 'attended' | 'cancelled'
+  notes?: string
+  createdAt: string
+}
+
+export type ReminderType = 'birthday' | 'festival' | 'member_day' | 'coupon_expire' | 'activity_reminder'
+
+export interface MarketingReminder {
+  id: string
+  type: ReminderType
+  typeLabel: string
+  title: string
+  content: string
+  customerIds: string[]
+  sendDate: string
+  status: 'pending' | 'sent' | 'cancelled'
+  createdAt: string
+  sentAt?: string
+}
+
+export interface MarketingEffectStat {
+  period: string
+  newMembers: number
+  activeMembers: number
+  totalOrders: number
+  totalRevenue: number
+  couponUsedCount: number
+  campaignParticipantCount: number
+  conversionRate: number
+}
+
+export interface CustomerSegment {
+  id: string
+  name: string
+  description: string
+  filters: {
+    levels?: MemberLevel[]
+    sources?: CustomerSource[]
+    repurchaseIntentions?: RepurchaseIntention[]
+    minOrders?: number
+    maxOrders?: number
+    minAmount?: number
+    maxAmount?: number
+    tags?: string[]
+  }
+  customerCount: number
+  createdAt: string
+}
+
+export interface CampaignVisitTrack {
+  id: string
+  campaignId: string
+  campaignName: string
+  customerId: string
+  customerName: string
+  visitDate: string
+  visitType: 'phone' | 'wechat' | 'onsite'
+  visitor: string
+  feedback: string
+  satisfactionScore: number
+  hasRepurchaseIntention: boolean
+  nextFollowUpDate?: string
+  createdAt: string
+}
+
+export const memberLevelOptions = [
+  { label: '青铜会员', value: 'bronze', color: '#cd7f32', minPoints: 0, discount: 1 },
+  { label: '白银会员', value: 'silver', color: '#c0c0c0', minPoints: 1000, discount: 0.95 },
+  { label: '黄金会员', value: 'gold', color: '#ffd700', minPoints: 5000, discount: 0.9 },
+  { label: '铂金会员', value: 'platinum', color: '#e5e4e2', minPoints: 20000, discount: 0.85 },
+  { label: '钻石会员', value: 'diamond', color: '#b9f2ff', minPoints: 50000, discount: 0.8 }
+]
+
+export const pointChangeTypeOptions: { label: string; value: PointChangeType; isPositive: boolean }[] = [
+  { label: '消费获得', value: 'earn_order', isPositive: true },
+  { label: '注册赠送', value: 'earn_signup', isPositive: true },
+  { label: '活动奖励', value: 'earn_activity', isPositive: true },
+  { label: '生日赠送', value: 'earn_birthday', isPositive: true },
+  { label: '兑换优惠券', value: 'spend_coupon', isPositive: false },
+  { label: '兑换商品', value: 'spend_product', isPositive: false },
+  { label: '活动报名', value: 'spend_activity', isPositive: false },
+  { label: '调整', value: 'adjust', isPositive: false }
+]
+
+export const couponTypeOptions: { label: string; value: CouponType }[] = [
+  { label: '折扣券', value: 'discount' },
+  { label: '满减券', value: 'fixed_amount' },
+  { label: '包邮券', value: 'free_shipping' },
+  { label: '赠品券', value: 'gift' }
+]
+
+export const campaignTypeOptions: { label: string; value: CampaignType }[] = [
+  { label: '促销活动', value: 'promotion' },
+  { label: '会员日', value: 'membership_day' },
+  { label: '节日活动', value: 'festival' },
+  { label: '新品发布', value: 'new_product' },
+  { label: '周年庆', value: 'anniversary' }
+]
+
+export const campaignStatusOptions: { label: string; value: CampaignStatus; color: string }[] = [
+  { label: '草稿', value: 'draft', color: '#999' },
+  { label: '进行中', value: 'active', color: '#18a058' },
+  { label: '已结束', value: 'ended', color: '#2080f0' },
+  { label: '已取消', value: 'cancelled', color: '#d03050' }
+]
+
+export const marketingReminderTypeOptions: { label: string; value: ReminderType }[] = [
+  { label: '生日祝福', value: 'birthday' },
+  { label: '节日问候', value: 'festival' },
+  { label: '会员日提醒', value: 'member_day' },
+  { label: '优惠券即将过期', value: 'coupon_expire' },
+  { label: '活动提醒', value: 'activity_reminder' }
+]
+
+export const memberLevelConfigs: MemberLevelConfig[] = [
+  {
+    level: 'bronze',
+    name: '青铜会员',
+    minPoints: 0,
+    maxPoints: 999,
+    discount: 1,
+    color: '#cd7f32',
+    benefits: ['注册即享', '生日积分双倍', '专属客服']
+  },
+  {
+    level: 'silver',
+    name: '白银会员',
+    minPoints: 1000,
+    maxPoints: 4999,
+    discount: 0.95,
+    color: '#c0c0c0',
+    benefits: ['9.5折优惠', '生日积分双倍', '专属客服', '优先发货']
+  },
+  {
+    level: 'gold',
+    name: '黄金会员',
+    minPoints: 5000,
+    maxPoints: 19999,
+    discount: 0.9,
+    color: '#ffd700',
+    benefits: ['9折优惠', '生日积分3倍', '专属客服', '优先发货', '新品优先体验']
+  },
+  {
+    level: 'platinum',
+    name: '铂金会员',
+    minPoints: 20000,
+    maxPoints: 49999,
+    discount: 0.85,
+    color: '#e5e4e2',
+    benefits: ['8.5折优惠', '生日积分5倍', '1对1专属客服', '顺丰包邮', '新品优先体验', '专属活动邀请']
+  },
+  {
+    level: 'diamond',
+    name: '钻石会员',
+    minPoints: 50000,
+    maxPoints: Infinity,
+    discount: 0.8,
+    color: '#b9f2ff',
+    benefits: ['8折优惠', '生日积分10倍', '1对1专属客服', '顺丰包邮', '新品优先体验', '专属活动邀请', '定制服务优先', '年度礼品']
+  }
 ]
