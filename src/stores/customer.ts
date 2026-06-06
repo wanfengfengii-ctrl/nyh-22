@@ -223,6 +223,9 @@ export const useCustomerStore = defineStore('customer', () => {
     if (!data.appointmentDeliveryDate) {
       return { success: false, message: '请选择预约交付日期' }
     }
+    if (data.appointmentDeliveryDate < getToday()) {
+      return { success: false, message: '预约交付日期不能早于今天' }
+    }
 
     const customer = getCustomerById(data.customerId)
     if (!customer) {
@@ -246,7 +249,6 @@ export const useCustomerStore = defineStore('customer', () => {
     updateCustomerStats(data.customerId)
 
     initProductionProgress(order.id)
-    generateDeliveryVisitTask(order.id, customer.name)
 
     return { success: true, order }
   }
@@ -279,6 +281,7 @@ export const useCustomerStore = defineStore('customer', () => {
       const order = customOrders.value[index]
       order.actualDeliveryDate = getToday()
       updateCustomerStats(order.customerId)
+      generateDeliveryVisitTask(order.id, order.customerName)
     }
 
     return { success: true }
@@ -414,7 +417,7 @@ export const useCustomerStore = defineStore('customer', () => {
       actualDeliveryDate: data.deliveryDate
     })
 
-    completeVisitTasksByOrderId(orderId, 'delivery_visit')
+    generateDeliveryVisitTask(orderId, order.customerName)
 
     return { success: true, confirm }
   }
@@ -491,7 +494,8 @@ export const useCustomerStore = defineStore('customer', () => {
     const order = getOrderById(orderId)
     if (!order) return
 
-    const visitDate = addDays(order.appointmentDeliveryDate, 3)
+    const baseDate = order.actualDeliveryDate || order.appointmentDeliveryDate
+    const visitDate = addDays(baseDate, 3)
     const existingTask = visitTasks.value.find(
       t => t.orderId === orderId && t.taskType === 'delivery_visit' && t.status !== 'completed'
     )

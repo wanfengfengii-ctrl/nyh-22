@@ -1108,7 +1108,7 @@ const orderColumns = [
           </n-grid-item>
           <n-grid-item>
             <n-form-item label="预约交付日期" required>
-              <n-date-picker v-model:value="orderForm.appointmentDeliveryDate as any" type="date" style="width: 100%" />
+              <n-date-picker v-model:value="orderForm.appointmentDeliveryDate as any" type="date" style="width: 100%" :min-date="new Date().setHours(0, 0, 0, 0)" />
             </n-form-item>
           </n-grid-item>
         </n-grid>
