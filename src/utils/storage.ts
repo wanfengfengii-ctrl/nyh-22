@@ -5,7 +5,13 @@ import type {
   ReminderTask,
   AbnormalRecord,
   OperationLog,
-  BatchImportItem
+  BatchImportItem,
+  Customer,
+  CustomOrder,
+  ProductionProgressRecord,
+  DeliveryConfirm,
+  AfterSaleVisit,
+  VisitTask
 } from '@/types'
 
 const LANDSCAPES_KEY = 'moss_landscapes'
@@ -14,6 +20,12 @@ const CARE_RULES_KEY = 'moss_care_rules'
 const REMINDER_TASKS_KEY = 'moss_reminder_tasks'
 const ABNORMAL_RECORDS_KEY = 'moss_abnormal_records'
 const OPERATION_LOGS_KEY = 'moss_operation_logs'
+const CUSTOMERS_KEY = 'moss_customers'
+const CUSTOM_ORDERS_KEY = 'moss_custom_orders'
+const PRODUCTION_RECORDS_KEY = 'moss_production_records'
+const DELIVERY_CONFIRMS_KEY = 'moss_delivery_confirms'
+const AFTER_SALE_VISITS_KEY = 'moss_after_sale_visits'
+const VISIT_TASKS_KEY = 'moss_visit_tasks'
 
 function getData<T>(key: string): T[] {
   const data = localStorage.getItem(key)
@@ -211,4 +223,83 @@ export function validateBatchImportItem(item: BatchImportItem): { valid: boolean
   }
 
   return { valid: errors.length === 0, errors }
+}
+
+export function getCustomers(): Customer[] {
+  return getData<Customer>(CUSTOMERS_KEY)
+}
+
+export function saveCustomers(customers: Customer[]): void {
+  saveData(CUSTOMERS_KEY, customers)
+}
+
+export function getCustomOrders(): CustomOrder[] {
+  return getData<CustomOrder>(CUSTOM_ORDERS_KEY)
+}
+
+export function saveCustomOrders(orders: CustomOrder[]): void {
+  saveData(CUSTOM_ORDERS_KEY, orders)
+}
+
+export function getProductionRecords(): ProductionProgressRecord[] {
+  return getData<ProductionProgressRecord>(PRODUCTION_RECORDS_KEY)
+}
+
+export function saveProductionRecords(records: ProductionProgressRecord[]): void {
+  saveData(PRODUCTION_RECORDS_KEY, records)
+}
+
+export function getDeliveryConfirms(): DeliveryConfirm[] {
+  return getData<DeliveryConfirm>(DELIVERY_CONFIRMS_KEY)
+}
+
+export function saveDeliveryConfirms(confirms: DeliveryConfirm[]): void {
+  saveData(DELIVERY_CONFIRMS_KEY, confirms)
+}
+
+export function getAfterSaleVisits(): AfterSaleVisit[] {
+  return getData<AfterSaleVisit>(AFTER_SALE_VISITS_KEY)
+}
+
+export function saveAfterSaleVisits(visits: AfterSaleVisit[]): void {
+  saveData(AFTER_SALE_VISITS_KEY, visits)
+}
+
+export function getVisitTasks(): VisitTask[] {
+  return getData<VisitTask>(VISIT_TASKS_KEY)
+}
+
+export function saveVisitTasks(tasks: VisitTask[]): void {
+  saveData(VISIT_TASKS_KEY, tasks)
+}
+
+export function generateOrderNo(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const random = Math.random().toString(36).substr(2, 6).toUpperCase()
+  return `DD${year}${month}${day}${random}`
+}
+
+export function isPhoneValid(phone: string): boolean {
+  const phoneRegex = /^1[3-9]\d{9}$/
+  return phoneRegex.test(phone)
+}
+
+export function isEmailValid(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function isDateNotPast(dateStr: string): boolean {
+  const date = new Date(dateStr)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  return !isNaN(date.getTime()) && date >= today
+}
+
+export function isBudgetValid(min: number, max: number): boolean {
+  return typeof min === 'number' && typeof max === 'number' && min >= 0 && max >= min
 }

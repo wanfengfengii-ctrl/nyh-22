@@ -35,6 +35,11 @@ const routes = [
     path: '/operation-logs',
     name: 'operation-logs',
     component: () => import('@/pages/OperationLogs.vue')
+  },
+  {
+    path: '/customer-center',
+    name: 'customer-center',
+    component: () => import('@/pages/CustomerCenter.vue')
   }
 ]
 

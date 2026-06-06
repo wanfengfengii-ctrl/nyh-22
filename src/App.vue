@@ -17,7 +17,8 @@ import {
   Calendar,
   BarChart3,
   Archive,
-  ScrollText
+  ScrollText,
+  Users
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -54,6 +55,15 @@ const menuOptions = [
     icon: () => h(NIcon, null, { default: () => h(Archive) })
   },
   {
+    type: 'divider',
+    key: 'divider2'
+  },
+  {
+    label: '客户定制中心',
+    key: 'customer-center',
+    icon: () => h(NIcon, null, { default: () => h(Users) })
+  },
+  {
     label: '操作日志',
     key: 'operation-logs',
     icon: () => h(NIcon, null, { default: () => h(ScrollText) })
@@ -68,6 +78,7 @@ const activeKey = computed(() => {
   if (path === '/calendar') return 'calendar'
   if (path === '/analytics') return 'analytics'
   if (path === '/sold-archive') return 'sold-archive'
+  if (path === '/customer-center') return 'customer-center'
   if (path === '/operation-logs') return 'operation-logs'
   return 'dashboard'
 })
